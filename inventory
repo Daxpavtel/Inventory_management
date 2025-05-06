@@ -1,0 +1,263 @@
+import java.io.*;
+import java.util.*;
+
+class InventoryItem implements Serializable {
+    private String name;
+    private int quantity;
+    private double pricePerUnit;
+
+    public InventoryItem(String name, int quantity, double pricePerUnit) {
+        this.name = name;
+        this.quantity = quantity;
+        this.pricePerUnit = pricePerUnit;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public double getPricePerUnit() {
+        return pricePerUnit;
+    }
+
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
+    }
+
+    public void setPricePerUnit(double pricePerUnit) {
+        this.pricePerUnit = pricePerUnit;
+    }
+}
+
+class Inventory implements Serializable {
+    private List<InventoryItem> items;
+
+    public List<InventoryItem> getAllItems() {
+        return items;
+    }
+
+    public Inventory() {
+        this.items = new ArrayList<>();
+    }
+
+    public void addItem(InventoryItem item, double pricePerUnit) {
+        item.setQuantity(item.getQuantity());
+        items.add(item);
+        System.out.println("Item added successfully");
+    }
+
+    public void removeItem(String itemName) {
+        Iterator<InventoryItem> iterator = items.iterator();
+        while (iterator.hasNext()) {
+            InventoryItem item = iterator.next();
+            if (item.getName().equals(itemName)) {
+                iterator.remove();
+                System.out.println("Item removed");
+                return;
+            }
+        }
+        throw new NoSuchElementException("Item not found in inventory");
+    }
+
+    public void displayInventory() {
+        if (items.isEmpty()) {
+            System.out.println("Inventory is empty");
+        } else {
+            System.out.println("Current Inventory:");
+            for (InventoryItem item : items) {
+                System.out.println("Item:" + item.getName() + "  Quantity:" + item.getQuantity()
+                        + "  Price per unit: Rs" + item.getPricePerUnit());
+            }
+        }
+    }
+
+    public void saveToFile(String filename) {
+        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(filename))) {
+            out.writeObject(this);
+            System.out.println("Inventory saved to " + filename);
+        } catch (IOException e) {
+            System.err.println("Error saving inventory to file: " + e.getMessage());
+        }
+    }
+
+    public static Inventory loadFromFile(String filename) {
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(filename))) {
+            return (Inventory) in.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            System.err.println("Error loading inventory from file: " + e.getMessage());
+            return new Inventory();
+        }
+    }
+
+    public List<InventoryItem> searchByName(String name) {
+        List<InventoryItem> result = new ArrayList<>();
+        for (InventoryItem item : items) {
+            if (item.getName().equalsIgnoreCase(name)) {
+                result.add(item);
+            }
+        }
+        return result;
+    }
+}
+
+public class InventoryManagement {
+    public static void calculateItemTotalValue(List<InventoryItem> items) {
+        for (InventoryItem item : items) {
+            double totalValue = item.getQuantity() * item.getPricePerUnit();
+            System.out.println("Total value of " + item.getName() + ": Rs " + totalValue);
+        }
+    }
+
+    public static void calculateTotalInventoryValue(List<InventoryItem> items) {
+        double totalValue = 0;
+        for (InventoryItem item : items) {
+            totalValue += item.getQuantity() * item.getPricePerUnit();
+        }
+        System.out.println("Total value of the inventory: Rs " + totalValue);
+    }
+
+    public static void main(String[] args) {
+        Inventory inventory = Inventory.loadFromFile("inventory.txt");
+        Scanner s = new Scanner(System.in);
+        System.out.println("Inventory Management System");
+        while (true) {
+            try {
+                System.out.println("*********");
+                System.out.println("1. Add item");
+                System.out.println("2. Remove item");
+                System.out.println("3. Update quantity");
+                System.out.println("4. Update price per unit");
+                System.out.println("5. Display inventory");
+                System.out.println("6. Search inventory by name");
+                System.out.println("7. Calculate total value of each item");
+                System.out.println("8. Calculate total value of inventory");
+                System.out.println("9. Save inventory to file");
+                System.out.println("10. Exit");
+                System.out.println("-----------------------------");
+                System.out.print("Enter your choice: ");
+                int choice = s.nextInt();
+                System.out.println("-------------------------");
+
+                switch (choice) {
+                    case 1:
+                        // Add item
+                        System.out.print("Enter item name: ");
+                        String itemName = s.next();
+
+                        // Check if the item already exists in the inventory
+                        boolean itemExists = inventory.getAllItems().stream()
+                                .anyMatch(item -> item.getName().equalsIgnoreCase(itemName));
+
+                        if (itemExists) {
+                            System.out.println("Item with the same name already exists in the inventory.");
+                        } else {
+                            System.out.print("Enter quantity: ");
+                            int quantity = s.nextInt();
+                            if (quantity < 0) {
+                                throw new IllegalArgumentException("Quantity cannot be negative");
+                            }
+                            System.out.print("Enter price per unit: Rs");
+                            double pricePerUnit = s.nextDouble();
+                            if (pricePerUnit < 0) {
+                                throw new IllegalArgumentException("Price per unit cannot be negative");
+                            }
+                            inventory.addItem(new InventoryItem(itemName, quantity, pricePerUnit), pricePerUnit);
+                        }
+                        break;
+                    case 2:
+                        // Remove item
+                        System.out.print("Enter item name to remove: ");
+                        String itemToRemove = s.next();
+                        inventory.removeItem(itemToRemove);
+                        break;
+                    case 3:
+                        // Update quantity
+                        System.out.print("Enter item name to update quantity: ");
+                        String itemNameToUpdate = s.next();
+                        System.out.print("Enter new quantity: ");
+                        int newQuantity = s.nextInt();
+                        if (newQuantity < 0) {
+                            throw new IllegalArgumentException("Quantity cannot be negative");
+                        }
+                        List<InventoryItem> searchResult = inventory.searchByName(itemNameToUpdate);
+                        if (!searchResult.isEmpty()) {
+                            InventoryItem itemToUpdate = searchResult.get(0);
+                            itemToUpdate.setQuantity(newQuantity);
+                            System.out.println("Quantity updated successfully");
+                        } else {
+                            System.out.println("Item not found in inventory.");
+                        }
+                        break;
+                    case 4:
+                        // Update price per unit
+                        System.out.print("Enter item name to update price per unit: ");
+                        String itemNameToUpdatePrice = s.next();
+                        System.out.print("Enter new price per unit: Rs");
+                        double newPricePerUnit = s.nextDouble();
+                        if (newPricePerUnit < 0) {
+                            throw new IllegalArgumentException("Price per unit cannot be negative");
+                        }
+                        List<InventoryItem> searchResultPrice = inventory.searchByName(itemNameToUpdatePrice);
+                        if (!searchResultPrice.isEmpty()) {
+                            InventoryItem itemToUpdatePrice = searchResultPrice.get(0);
+                            itemToUpdatePrice.setPricePerUnit(newPricePerUnit);
+                            System.out.println("Price per unit updated successfully");
+                        } else {
+                            System.out.println("Item not found in inventory.");
+                        }
+                        break;
+                    case 5:
+                        // Display inventory
+                        inventory.displayInventory();
+                        break;
+                    case 6:
+                        // Search inventory by name
+                        System.out.print("Enter item name to search: ");
+                        String itemNameToSearch = s.next();
+                        List<InventoryItem> searchResult5 = inventory.searchByName(itemNameToSearch);
+                        if (searchResult5.isEmpty()) {
+                            System.out.println("No items found with the given name.");
+                        } else {
+                            System.out.println("Search results:");
+                            for (InventoryItem item : searchResult5) {
+                                System.out.println("Item:" + item.getName() + "  Quantity:" + item.getQuantity()
+                                        + "  Price per unit: Rs" + item.getPricePerUnit());
+                            }
+                        }
+                        break;
+                    case 7:
+                        // Calculate total value of each item
+                        System.out.println("Calculating total value of each item:");
+                        List<InventoryItem> allItems = inventory.getAllItems();
+                        calculateItemTotalValue(allItems);
+                        break;
+                    case 8:
+                        // Calculate total value of inventory
+                        System.out.println("Calculating total value of inventory:");
+                        calculateTotalInventoryValue(inventory.getAllItems());
+                        break;
+                    case 9:
+                        // Save inventory to file
+                        inventory.saveToFile("inventory.txt");
+                        break;
+                    case 10:
+                        // Exit
+                        System.out.println("Exiting...");
+                        System.exit(0);
+                    default:
+                        System.out.println("Invalid choice");
+                }
+            } catch (InputMismatchException e) {
+                System.out.println("Invalid input! Please enter a valid integer.");
+                s.nextLine(); // Consume the invalid input
+            } catch (NoSuchElementException | IllegalArgumentException e) {
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+
+}
